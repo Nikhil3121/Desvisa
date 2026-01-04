@@ -15,7 +15,7 @@ import Signup from "./lib/pages/signup";
 import Login from "./lib/pages/login";
 import Profile from "./lib/pages/profile";
 import Wishlist from "./lib/pages/wishlist";
-import Footer from "./lib/components/Footer";
+
 
 export default function App() {
   return (
