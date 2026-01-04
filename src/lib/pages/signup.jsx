@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { signup } from "../api"; // ✅ use api.js
 
 function Signup() {
   const [formData, setFormData] = useState({
@@ -28,35 +29,23 @@ function Signup() {
       setLoading(true);
       setMessage("");
 
-      const res = await fetch("http://localhost:5000/api/users/signup", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          name: formData.name,
-          email: formData.email,
-          phone: formData.phone,
-          password: formData.password
-        })
+      await signup({
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        password: formData.password
       });
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        setMessage(`❌ ${data.message || "Signup failed"}`);
-      } else {
-        setMessage("✅ Signup successful!");
-        setFormData({
-          name: "",
-          email: "",
-          phone: "",
-          password: "",
-          confirmPassword: ""
-        });
-      }
+      setMessage("✅ Signup successful!");
+      setFormData({
+        name: "",
+        email: "",
+        phone: "",
+        password: "",
+        confirmPassword: ""
+      });
     } catch (error) {
-      setMessage("❌ Server error. Try again.");
+      setMessage(`❌ ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -69,7 +58,7 @@ function Signup() {
         <div style={heroContent}>
           <h1 style={heroTitle}>Create Your Account</h1>
           <p style={heroSubtitle}>
-            Join Deshvisa and upgrade your fashion experience
+            Join Desvisa and upgrade your fashion experience
           </p>
         </div>
       </section>
@@ -138,49 +127,3 @@ function Signup() {
 }
 
 export default Signup;
-
-/* ================= STYLES ================= */
-
-const heroStyle = {
-  height: "60vh",
-  background: "linear-gradient(to right, #111, #333)",
-  color: "#fff",
-  display: "flex",
-  alignItems: "center",
-  paddingLeft: "80px"
-};
-
-const heroContent = { maxWidth: "600px" };
-const heroTitle = { fontSize: "48px", marginBottom: "10px" };
-const heroSubtitle = { fontSize: "18px", color: "#ccc" };
-
-const formSection = {
-  padding: "50px",
-  display: "flex",
-  justifyContent: "center"
-};
-
-const form = {
-  maxWidth: "450px",
-  width: "100%",
-  display: "flex",
-  flexDirection: "column",
-  gap: "15px",
-  background: "#f9f9f9",
-  padding: "40px"
-};
-
-const input = {
-  padding: "12px",
-  fontSize: "16px",
-  border: "1px solid #ccc"
-};
-
-const submitBtn = {
-  padding: "12px",
-  background: "#000",
-  color: "#fff",
-  border: "none",
-  cursor: "pointer",
-  fontSize: "16px"
-};

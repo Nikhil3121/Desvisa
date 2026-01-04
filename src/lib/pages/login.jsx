@@ -1,5 +1,6 @@
-import { use, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { login } from "../api";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -12,29 +13,24 @@ export default function Login() {
     e.preventDefault();
 
     try {
-      const res = await fetch(
-        `${import.meta.env.VITE_BASE_URL}/api/users/login`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password }),
-        }
-      );
+      setLoading(true);
+      setMessage("");
 
-      const data = await res.json();
+      const data = await login({ email, password });
 
-      if (!res.ok) {
-        setMessage(data.message || "Login failed");
-        return;
+      // Optional: store user info (token if backend sends it)
+      if (data.token) {
+        localStorage.setItem("token", data.token);
+      }
+      if (data.user) {
+        localStorage.setItem("user", JSON.stringify(data.user));
       }
 
-      // ✅ SAVE TOKEN FROM BACKEND
-      localStorage.setItem("token", data.token);
-      localStorage.setItem("user", JSON.stringify(data.user));
-      window.dispatchEvent(new Event("storage"));
       navigate("/profile");
     } catch (error) {
-      setMessage("Server error");
+      setMessage(`❌ ${error.message}`);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -44,17 +40,10 @@ export default function Login() {
       <section style={heroStyle}>
         <div style={heroContent}>
           <h1 style={heroTitle}>Welcome Back</h1>
-          <p style={heroSubtitle}>Login to continue your Deshvisa journey</p>
+          <p style={heroSubtitle}>
+            Login to continue your Desvisa journey
+          </p>
         </div>
-      </section>
-
-      {/* LOGIN INTRO */}
-      <section style={section}>
-        <h2 style={heading}>Login</h2>
-        <p style={text}>
-          Sign in to your Deshvisa account to manage your orders, wishlist, and
-          profile.
-        </p>
       </section>
 
       {/* LOGIN FORM */}
@@ -78,12 +67,7 @@ export default function Login() {
             required
           />
 
-          <button
-            type="button"
-            style={submitBtn}
-            onClick={handleSubmit}
-            disabled={loading}
-          >
+          <button type="submit" style={submitBtn} disabled={loading}>
             {loading ? "Logging in..." : "Login"}
           </button>
 
@@ -91,19 +75,16 @@ export default function Login() {
 
           <p style={signupText}>
             Don’t have an account?{" "}
-            <span
-              style={signupLink}
-              onClick={() => (window.location.href = "/login")}
-            >
+            <Link to="/signup" style={signupLink}>
               Sign Up
-            </span>
+            </Link>
           </p>
         </form>
       </section>
 
       {/* TRUST SECTION */}
       <section style={highlightSection}>
-        <h2 style={highlightHeading}>Why Login to Deshvisa?</h2>
+        <h2 style={highlightHeading}>Why Login to Desvisa?</h2>
         <div style={benefitsGrid}>
           <div>✔ Track Orders Easily</div>
           <div>✔ Save Wishlist Items</div>
@@ -114,90 +95,3 @@ export default function Login() {
     </div>
   );
 }
-
-/* ================= STYLES ================= */
-
-const heroStyle = {
-  height: "60vh",
-  background: "linear-gradient(to right, #111, #333)",
-  color: "#fff",
-  display: "flex",
-  alignItems: "center",
-  paddingLeft: "80px",
-};
-
-const heroContent = { maxWidth: "600px" };
-const heroTitle = { fontSize: "48px", marginBottom: "10px" };
-const heroSubtitle = { fontSize: "18px", color: "#ccc" };
-
-const section = { padding: "70px 80px" };
-const heading = { fontSize: "32px", marginBottom: "20px" };
-const text = {
-  fontSize: "16px",
-  lineHeight: "1.8",
-  color: "#555",
-  maxWidth: "800px",
-};
-
-const formSection = {
-  padding: "50px 80px",
-  display: "flex",
-  justifyContent: "center",
-};
-
-const form = {
-  maxWidth: "450px",
-  width: "100%",
-  display: "flex",
-  flexDirection: "column",
-  gap: "15px",
-  background: "#f9f9f9",
-  padding: "40px",
-};
-
-const input = {
-  padding: "12px",
-  fontSize: "16px",
-  border: "1px solid #ccc",
-};
-
-const submitBtn = {
-  padding: "12px",
-  background: "#000",
-  color: "#fff",
-  border: "none",
-  cursor: "pointer",
-  fontSize: "16px",
-  marginTop: "10px",
-};
-
-const signupText = {
-  marginTop: "15px",
-  fontSize: "14px",
-  textAlign: "center",
-};
-
-const signupLink = {
-  color: "#000",
-  fontWeight: "bold",
-  cursor: "pointer",
-};
-
-const highlightSection = {
-  padding: "60px 80px",
-  background: "#000",
-  color: "#fff",
-  textAlign: "center",
-};
-
-const highlightHeading = {
-  fontSize: "32px",
-  marginBottom: "30px",
-};
-
-const benefitsGrid = {
-  display: "grid",
-  gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-  gap: "20px",
-  fontSize: "18px",
-};
