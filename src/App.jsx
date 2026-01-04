@@ -35,7 +35,7 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/wishlist" element={<Wishlist/>} />
-
+        <Route path="/footer" element={<Footer />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
 
