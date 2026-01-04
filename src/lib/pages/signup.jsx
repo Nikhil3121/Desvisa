@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { signup } from "../api"; // ✅ use api.js
+import { signup } from "@/state/apiAuth";
 
 function Signup() {
   const [formData, setFormData] = useState({
