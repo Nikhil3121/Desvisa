@@ -2,8 +2,14 @@ import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 
 export const api = createApi({
   reducerPath: "api",
+
   baseQuery: fetchBaseQuery({
-    baseUrl: import.meta.env.VITE_BASE_URL, // e.g. http://localhost:5000
+    baseUrl:
+      import.meta.env.VITE_API_URL ||
+      "https://desvisa-backend.onrender.com",
+
+    credentials: "include", // ✅ REQUIRED for auth cookies
+
     prepareHeaders: (headers) => {
       const token = localStorage.getItem("token");
       if (token) {
@@ -39,7 +45,6 @@ export const api = createApi({
     getProducts: builder.query({
       query: ({ category, search } = {}) => {
         const params = new URLSearchParams();
-
         if (category) params.append("category", category);
         if (search) params.append("search", search);
 
@@ -54,7 +59,7 @@ export const api = createApi({
       providesTags: (result, error, id) => [{ type: "Product", id }],
     }),
 
-    /* ================= USERS ================= */
+    /* ================= USER ================= */
 
     getProfile: builder.query({
       query: () => "/api/users/profile",
@@ -74,7 +79,7 @@ export const api = createApi({
       providesTags: ["Wishlist"],
     }),
 
-    /* ================= ADMIN / CLIENT ================= */
+    /* ================= ADMIN ================= */
 
     getCustomers: builder.query({
       query: () => "/client/customers",
