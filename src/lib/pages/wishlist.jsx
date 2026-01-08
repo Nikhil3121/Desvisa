@@ -1,17 +1,56 @@
 import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { auth } from "@/firebase/firebase";
 import {
   useGetWishlistQuery,
   useToggleWishlistMutation,
+  useAddToCartMutation,
 } from "@/state/api";
+import { skipToken } from "@reduxjs/toolkit/query";
+import { onAuthStateChanged } from "firebase/auth";
 
 export default function Wishlist() {
+  const [isAuth, setIsAuth] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
+
+  /* 🔐 Track Firebase auth state */
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (user) => {
+      setIsAuth(!!user);
+      setAuthChecked(true);
+    });
+
+    return () => unsub();
+  }, []);
+
+  /* ✅ Hook ALWAYS runs */
   const {
     data: wishlist = [],
     isLoading,
     isError,
-  } = useGetWishlistQuery();
+  } = useGetWishlistQuery(
+    authChecked && isAuth ? undefined : skipToken
+  );
 
   const [toggleWishlist] = useToggleWishlistMutation();
+  const [addToCart, { isLoading: adding }] = useAddToCartMutation();
+
+  /* ⏳ Wait until Firebase checks auth */
+  if (!authChecked) {
+    return <h2 style={{ textAlign: "center" }}>Checking login…</h2>;
+  }
+
+  /* 🚫 Not logged in */
+  if (!isAuth) {
+    return (
+      <div style={{ padding: "80px", textAlign: "center" }}>
+        <h2>Please log in to view your wishlist.</h2>
+        <Link to="/login" style={{ color: "#007bff" }}>
+          Go to Login
+        </Link>
+      </div>
+    );
+  }
 
   const handleRemove = async (productId) => {
     try {
@@ -21,9 +60,17 @@ export default function Wishlist() {
     }
   };
 
+  const handleAddToCart = async (productId) => {
+    try {
+      await addToCart(productId).unwrap();
+      await toggleWishlist(productId);
+    } catch (err) {
+      console.error("Add to cart error", err);
+    }
+  };
+
   return (
     <div style={{ background: "#fafafa", minHeight: "100vh" }}>
-      {/* HERO */}
       <section style={heroStyle}>
         <div>
           <h1 style={heroTitle}>My Wishlist</h1>
@@ -33,7 +80,6 @@ export default function Wishlist() {
         </div>
       </section>
 
-      {/* CONTENT */}
       <section style={section}>
         {isLoading && <h2 style={stateText}>Loading wishlist…</h2>}
 
@@ -47,7 +93,6 @@ export default function Wishlist() {
           <div style={emptyState}>
             <div style={heart}>♡</div>
             <h2>Your wishlist is empty</h2>
-            <p>Start saving styles you love</p>
             <Link to="/products" style={shopBtn}>
               Explore Products
             </Link>
@@ -60,7 +105,11 @@ export default function Wishlist() {
               <div key={item._id} style={card}>
                 <div style={imageWrap}>
                   <img
-                    src={item.image || "https://via.placeholder.com/300x400"}
+                    src={
+                      item.images?.[0]?.startsWith("http")
+                        ? item.images[0]
+                        : "https://picsum.photos/300/400"
+                    }
                     alt={item.name}
                     style={image}
                   />
@@ -76,12 +125,20 @@ export default function Wishlist() {
                     </Link>
 
                     <button
-                      style={removeBtn}
-                      onClick={() => handleRemove(item._id)}
+                      style={addBtn}
+                      disabled={adding}
+                      onClick={() => handleAddToCart(item._id)}
                     >
-                      Remove
+                      {adding ? "Adding..." : "Add to Cart"}
                     </button>
                   </div>
+
+                  <button
+                    style={removeBtn}
+                    onClick={() => handleRemove(item._id)}
+                  >
+                    Remove
+                  </button>
                 </div>
               </div>
             ))}
@@ -91,130 +148,3 @@ export default function Wishlist() {
     </div>
   );
 }
-
-/* ================= PREMIUM STYLES ================= */
-
-const heroStyle = {
-  height: "42vh",
-  background:
-    "linear-gradient(135deg, #000 0%, #1c1c1c 50%, #000 100%)",
-  color: "#fff",
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  textAlign: "center",
-};
-
-const heroTitle = {
-  fontSize: "46px",
-  fontWeight: "700",
-  letterSpacing: "-1px",
-};
-
-const heroSubtitle = {
-  fontSize: "18px",
-  color: "#bdbdbd",
-  marginTop: "8px",
-};
-
-const section = {
-  padding: "80px 60px",
-  maxWidth: "1400px",
-  margin: "auto",
-};
-
-const stateText = {
-  textAlign: "center",
-  fontSize: "18px",
-};
-
-const emptyState = {
-  textAlign: "center",
-  padding: "80px 20px",
-  color: "#444",
-};
-
-const heart = {
-  fontSize: "64px",
-  marginBottom: "10px",
-  color: "#ff3f6c",
-};
-
-const shopBtn = {
-  display: "inline-block",
-  marginTop: "24px",
-  padding: "14px 36px",
-  background: "#000",
-  color: "#fff",
-  textDecoration: "none",
-  borderRadius: "30px",
-  fontWeight: "600",
-  transition: "transform 0.25s ease",
-};
-
-const grid = {
-  display: "grid",
-  gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
-  gap: "34px",
-};
-
-const card = {
-  background: "#fff",
-  borderRadius: "18px",
-  overflow: "hidden",
-  boxShadow: "0 12px 40px rgba(0,0,0,0.08)",
-  transition: "all 0.35s ease",
-};
-
-const imageWrap = {
-  height: "260px",
-  overflow: "hidden",
-};
-
-const image = {
-  width: "100%",
-  height: "100%",
-  objectFit: "cover",
-  transition: "transform 0.5s ease",
-};
-
-const content = {
-  padding: "18px",
-};
-
-const title = {
-  fontSize: "17px",
-  fontWeight: "600",
-  marginBottom: "6px",
-};
-
-const price = {
-  fontSize: "18px",
-  fontWeight: "700",
-  marginBottom: "16px",
-};
-
-const actionRow = {
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "center",
-};
-
-const viewBtn = {
-  textDecoration: "none",
-  padding: "10px 18px",
-  background: "#000",
-  color: "#fff",
-  borderRadius: "24px",
-  fontSize: "14px",
-  fontWeight: "600",
-};
-
-const removeBtn = {
-  background: "transparent",
-  border: "none",
-  color: "#ff3f6c",
-  fontWeight: "600",
-  cursor: "pointer",
-  fontSize: "14px",
-};

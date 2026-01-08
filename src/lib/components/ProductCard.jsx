@@ -32,7 +32,11 @@ export default function ProductCard({ product }) {
       {/* IMAGE */}
       <div style={imageWrapper}>
         <img
-          src={product.image || "https://via.placeholder.com/400x500"}
+          src={
+            product.images?.[0]?.startsWith("http")
+              ? product.images[0]
+              : "https://picsum.photos/400/500"
+          }
           alt={product.name}
           style={{
             ...image,
@@ -63,9 +67,7 @@ export default function ProductCard({ product }) {
 
         <div style={metaRow}>
           <span style={price}>₹{product.price}</span>
-          {product.rating && (
-            <span style={rating}>⭐ {product.rating}</span>
-          )}
+          {product.rating && <span style={rating}>⭐ {product.rating}</span>}
         </div>
 
         <p style={desc}>

@@ -1,18 +1,9 @@
-import { clsx } from "clsx";
-import { twMerge } from "tailwind-merge";
 import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
-import { auth } from "@/firebase/firebase";
+import { auth } from "@/firebase";
 import axios from "axios";
 
-/* ================== TAILWIND UTILS ================== */
-export function cn(...inputs) {
-  return twMerge(clsx(inputs));
-}
-
-/* ================== GOOGLE LOGIN ================== */
-export const googleLogin = async () => {
+const googleLogin = async () => {
   const provider = new GoogleAuthProvider();
-
   const result = await signInWithPopup(auth, provider);
 
   const idToken = await result.user.getIdToken();
@@ -22,9 +13,8 @@ export const googleLogin = async () => {
     { idToken }
   );
 
-  // 🔐 Store tokens
   localStorage.setItem("accessToken", res.data.accessToken);
   localStorage.setItem("refreshToken", res.data.refreshToken);
 
-  return res.data;
+  window.location.href = "/profile";
 };

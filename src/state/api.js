@@ -1,66 +1,103 @@
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
+import { auth } from "@/firebase/firebase";
 
+/* ================= BASE QUERY (FIREBASE) ================= */
+const baseQuery = fetchBaseQuery({
+  baseUrl: import.meta.env.VITE_BASE_URL,
+  prepareHeaders: async (headers) => {
+    const user = auth.currentUser;
+
+    if (user) {
+      // 🔥 Firebase auto-refreshes token internally
+      const token = await user.getIdToken();
+      headers.set("authorization", `Bearer ${token}`);
+    }
+
+    return headers;
+  },
+});
+/* ================= API ================= */
 export const api = createApi({
   reducerPath: "api",
 
-  baseQuery: fetchBaseQuery({
-    baseUrl:
-      import.meta.env.VITE_API_URL ||
-      "https://desvisa-backend.onrender.com",
+  // ✅ Use Firebase baseQuery (NOT baseQueryWithReauth)
+  baseQuery,
 
-    credentials: "include", // ✅ REQUIRED for auth cookies
-
-    prepareHeaders: (headers) => {
-      const token = localStorage.getItem("token");
-      if (token) {
-        headers.set("authorization", `Bearer ${token}`);
-      }
-      return headers;
-    },
-  }),
-
-  tagTypes: ["Products", "Product", "Customers", "User", "Wishlist"],
+  tagTypes: [
+    "Products",
+    "Product",
+    "Customers",
+    "User",
+    "Wishlist",
+    "Orders",
+    "Order",
+    "Cart",
+  ],
 
   endpoints: (builder) => ({
     /* ================= AUTH ================= */
+    
 
-    signupUser: builder.mutation({
+    loginUser: builder.mutation({
       query: (body) => ({
-        url: "/api/users/signup",
+        url: "/api/auth/login",
         method: "POST",
         body,
       }),
     }),
 
-    loginUser: builder.mutation({
+    forgotPassword: builder.mutation({
       query: (body) => ({
-        url: "/api/users/login",
+        url: "/api/auth/forgot-password",
         method: "POST",
         body,
+      }),
+    }),
+
+    resetPassword: builder.mutation({
+      query: ({ token, password }) => ({
+        url: `/api/auth/reset-password/${token}`,
+        method: "POST",
+        body: { password },
+      }),
+    }),
+
+    changePassword: builder.mutation({
+      query: (body) => ({
+        url: "/api/auth/change-password",
+        method: "POST",
+        body,
+      }),
+    }),
+
+    logoutAllDevices: builder.mutation({
+      query: () => ({
+        url: "/api/auth/logout-all",
+        method: "POST",
       }),
     }),
 
     /* ================= PRODUCTS ================= */
-
     getProducts: builder.query({
       query: ({ category, search } = {}) => {
         const params = new URLSearchParams();
+
         if (category) params.append("category", category);
         if (search) params.append("search", search);
 
         const queryString = params.toString();
-        return `/api/products${queryString ? `?${queryString}` : ""}`;
+
+        return `/api/products/${queryString ? `?${queryString}` : ""}`;
       },
       providesTags: ["Products"],
     }),
 
     getProductById: builder.query({
       query: (id) => `/api/products/${id}`,
-      providesTags: (result, error, id) => [{ type: "Product", id }],
+      providesTags: (r, e, id) => [{ type: "Product", id }],
     }),
 
     /* ================= USER ================= */
-
     getProfile: builder.query({
       query: () => "/api/users/profile",
       providesTags: ["User"],
@@ -79,8 +116,99 @@ export const api = createApi({
       providesTags: ["Wishlist"],
     }),
 
-    /* ================= ADMIN ================= */
+    /* ================= CART ================= */
+    getCart: builder.query({
+      query: () => "/api/users/cart",
+      providesTags: ["Cart"],
+    }),
 
+    addToCart: builder.mutation({
+      query: (productId) => ({
+        url: "/api/users/cart",
+        method: "POST",
+        body: { productId },
+      }),
+      invalidatesTags: ["Cart"],
+    }),
+
+    updateCartQty: builder.mutation({
+      query: ({ productId, quantity }) => ({
+        url: `/api/users/cart/${productId}`,
+        method: "PATCH",
+        body: { quantity },
+      }),
+      invalidatesTags: ["Cart"],
+    }),
+
+    removeFromCart: builder.mutation({
+      query: (productId) => ({
+        url: `/api/users/cart/${productId}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["Cart"],
+    }),
+
+    /* ================= ORDERS ================= */
+    createOrder: builder.mutation({
+      query: (body) => ({
+        url: "/api/orders",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Orders"],
+    }),
+
+    createRazorpayOrder: builder.mutation({
+      query: (body) => ({
+        url: "/api/orders/razorpay",
+        method: "POST",
+        body,
+      }),
+    }),
+
+    verifyPayment: builder.mutation({
+      query: (body) => ({
+        url: "/api/orders/verify-payment",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Orders"],
+    }),
+
+    createShipment: builder.mutation({
+      query: (body) => ({
+        url: "/api/orders/shiprocket",
+        method: "POST",
+        body,
+      }),
+    }),
+
+    getMyOrders: builder.query({
+      query: () => "/api/orders/myorders",
+      providesTags: ["Orders"],
+    }),
+
+    getOrderById: builder.query({
+      query: (id) => `/api/orders/${id}`,
+      providesTags: (r, e, id) => [{ type: "Order", id }],
+    }),
+
+    cancelOrder: builder.mutation({
+      query: (id) => ({
+        url: `/api/orders/${id}/cancel`,
+        method: "PUT",
+      }),
+      invalidatesTags: ["Orders"],
+    }),
+
+    downloadInvoice: builder.query({
+      query: (id) => ({
+        url: `/api/orders/${id}/invoice`,
+        responseHandler: (res) => res.blob(),
+      }),
+    }),
+
+    /* ================= ADMIN ================= */
     getCustomers: builder.query({
       query: () => "/client/customers",
       providesTags: ["Customers"],
@@ -88,13 +216,35 @@ export const api = createApi({
   }),
 });
 
+/* ================= EXPORT HOOKS ================= */
 export const {
-  useSignupUserMutation,
+  
   useLoginUserMutation,
+  useForgotPasswordMutation,
+  useResetPasswordMutation,
+  useChangePasswordMutation,
+  useLogoutAllDevicesMutation,
+
   useGetProductsQuery,
   useGetProductByIdQuery,
-  useGetCustomersQuery,
+
   useGetProfileQuery,
   useToggleWishlistMutation,
   useGetWishlistQuery,
+
+  useGetCartQuery,
+  useAddToCartMutation,
+  useUpdateCartQtyMutation,
+  useRemoveFromCartMutation,
+
+  useCreateOrderMutation,
+  useCreateRazorpayOrderMutation,
+  useVerifyPaymentMutation,
+  useCreateShipmentMutation,
+  useGetMyOrdersQuery,
+  useGetOrderByIdQuery,
+  useCancelOrderMutation,
+  useLazyDownloadInvoiceQuery,
+
+  useGetCustomersQuery,
 } = api;

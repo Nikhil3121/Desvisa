@@ -19,7 +19,10 @@ export default function Footer() {
         {/* BRAND */}
         <div>
           <h3 className="text-xl font-semibold text-white mb-3">
-            Deshvisa
+            Deshvisa 
+          </h3>
+          <h3>
+            Designed & Developed by Nikhil Kumar
           </h3>
           <p className="text-sm leading-relaxed text-neutral-400">
             Modern fashion crafted with intention. Premium fabrics,

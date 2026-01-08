@@ -1,100 +1,264 @@
 import { useState } from "react";
-import { useSignupUserMutation } from "@/state/api";
+import { Link, useNavigate } from "react-router-dom";
+import {
+  createUserWithEmailAndPassword,
+  sendEmailVerification,
+} from "firebase/auth";
+import { auth } from "@/firebase/firebase";
+import { googleLogin } from "@/lib/utils";
 
-function Signup() {
-  const [signupUser, { isLoading }] = useSignupUserMutation();
+/* ================= PASSWORD STRENGTH ================= */
+const getPasswordStrength = (password) => {
+  let score = 0;
+  if (password.length >= 6) score++;
+  if (password.length >= 10) score++;
+  if (/[A-Z]/.test(password)) score++;
+  if (/\d/.test(password)) score++;
+  if (/[^A-Za-z0-9]/.test(password)) score++;
+  return score;
+};
+
+export default function Signup() {
+  const navigate = useNavigate();
+
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    password: "",
+    confirmPassword: "",
+  });
+
+  const [acceptTerms, setAcceptTerms] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const [success, setSuccess] = useState(false);
+
+  const strength = getPasswordStrength(form.password);
+
+  const strengthLabel = [
+    "Very Weak",
+    "Weak",
+    "Fair",
+    "Good",
+    "Strong",
+    "Very Strong",
+  ][strength];
+
+  const strengthColor = [
+    "bg-red-500",
+    "bg-red-500",
+    "bg-yellow-500",
+    "bg-yellow-400",
+    "bg-green-500",
+    "bg-green-600",
+  ][strength];
+
+  const handleChange = (e) =>
+    setForm({ ...form, [e.target.name]: e.target.value });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setMessage("");
+
+    if (strength < 3) {
+      return setMessage(
+        "Password is too weak. Use uppercase letters, numbers, and symbols."
+      );
+    }
+
+    if (form.password !== form.confirmPassword) {
+      return setMessage("Passwords do not match.");
+    }
+
+    if (!acceptTerms) {
+      return setMessage("Please accept the Terms & Conditions.");
+    }
 
     try {
-      setMessage("");
-      await signupUser({
-        name: e.target.name.value,
-        email: e.target.email.value,
-        phone: e.target.phone.value,
-        password: e.target.password.value,
-      }).unwrap();
+      setLoading(true);
 
-      setMessage("✅ Signup successful! You can now login.");
-      e.target.reset();
+      await createUserWithEmailAndPassword(
+        auth,
+        form.email,
+        form.password
+      );
+
+      await sendEmailVerification(auth.currentUser);
+
+      setSuccess(true);
+      setMessage(
+        "Account created successfully. Please verify your email before logging in."
+      );
     } catch (err) {
-      setMessage(`❌ ${err?.data?.message || "Signup failed"}`);
+      setSuccess(false);
+      setMessage(
+        err.code === "auth/email-already-in-use"
+          ? "Email already registered"
+          : "Signup failed. Please try again."
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4">
-      <div className="w-full max-w-md bg-white rounded-xl shadow-lg p-8">
-        {/* Header */}
-        <div className="mb-6 text-center">
-          <h1 className="text-3xl font-bold text-gray-900">Create Account</h1>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 px-4">
+      <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl px-10 py-12">
+        {/* HEADER */}
+        <div className="text-center mb-10">
+          <h1 className="text-3xl font-extrabold text-gray-900">
+            Create your account
+          </h1>
           <p className="text-gray-500 mt-2">
             Join <span className="font-semibold">Desvisa</span> today
           </p>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
+        {/* FORM */}
+        <form onSubmit={handleSubmit} className="space-y-5">
           <input
             name="name"
             placeholder="Full Name"
             required
-            className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+            onChange={handleChange}
+            className="input"
           />
 
           <input
             name="email"
             type="email"
-            placeholder="Email Address"
+            placeholder="Email address"
             required
-            className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+            onChange={handleChange}
+            className="input"
           />
 
           <input
             name="phone"
-            placeholder="Phone Number"
-            className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+            placeholder="Phone number (optional)"
+            onChange={handleChange}
+            className="input"
           />
 
           <input
             name="password"
             type="password"
             placeholder="Password"
+            onChange={handleChange}
             required
-            className="w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+            className="input"
           />
+
+          {/* PASSWORD STRENGTH */}
+          {form.password && (
+            <div>
+              <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+                <div
+                  className={`h-full ${strengthColor}`}
+                  style={{ width: `${(strength / 5) * 100}%` }}
+                />
+              </div>
+              <p className="text-xs mt-1 text-gray-600">
+                Strength: <strong>{strengthLabel}</strong>
+              </p>
+            </div>
+          )}
+
+          <input
+            name="confirmPassword"
+            type="password"
+            placeholder="Confirm password"
+            onChange={handleChange}
+            required
+            className="input"
+          />
+
+          {/* GOOGLE */}
+          <button
+            type="button"
+            onClick={async () => {
+              try {
+                await googleLogin();
+                navigate("/profile");
+              } catch {
+                alert("Google login failed");
+              }
+            }}
+            className="w-full py-3 border border-gray-300 rounded-xl font-medium hover:bg-gray-50"
+          >
+            Continue with Google
+          </button>
+
+          {/* TERMS */}
+          <label className="flex gap-2 text-sm text-gray-600">
+            <input
+              type="checkbox"
+              checked={acceptTerms}
+              onChange={(e) => setAcceptTerms(e.target.checked)}
+              className="accent-black mt-1"
+            />
+            <span>
+              I agree to the{" "}
+              <Link to="/terms" className="underline font-medium">
+                Terms
+              </Link>{" "}
+              and{" "}
+              <Link to="/privacy" className="underline font-medium">
+                Privacy Policy
+              </Link>
+            </span>
+          </label>
 
           <button
             type="submit"
-            disabled={isLoading}
-            className="w-full py-3 bg-black text-white font-semibold rounded-lg hover:bg-gray-800 transition disabled:opacity-60"
+            disabled={loading || success}
+            className="w-full py-3 bg-black text-white rounded-xl font-semibold hover:opacity-90 disabled:opacity-60"
           >
-            {isLoading ? "Creating Account..." : "Sign Up"}
+            {loading
+              ? "Creating account..."
+              : success
+              ? "Check your email"
+              : "Create Account"}
           </button>
         </form>
 
-        {/* Message */}
+        {/* MESSAGE */}
         {message && (
-          <p className="mt-4 text-center text-sm font-medium">
+          <p
+            className={`mt-4 text-center text-sm ${
+              success ? "text-green-600" : "text-red-600"
+            }`}
+          >
             {message}
           </p>
         )}
 
-        {/* Footer */}
-        <p className="mt-6 text-center text-sm text-gray-600">
+        {/* FOOTER */}
+        <p className="mt-8 text-center text-sm text-gray-600">
           Already have an account?{" "}
-          <a
-            href="/login"
-            className="font-semibold text-black hover:underline"
-          >
+          <Link to="/login" className="font-semibold hover:underline">
             Login
-          </a>
+          </Link>
         </p>
       </div>
+
+      {/* INPUT STYLE */}
+      <style>
+        {`
+          .input {
+            width: 100%;
+            padding: 0.9rem 1.1rem;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.9rem;
+            outline: none;
+          }
+          .input:focus {
+            border-color: #000;
+            box-shadow: 0 0 0 1px #000;
+          }
+        `}
+      </style>
     </div>
   );
 }
-
-export default Signup;

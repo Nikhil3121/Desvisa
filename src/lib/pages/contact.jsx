@@ -28,7 +28,7 @@ export default function Contact() {
         <div style={infoGrid}>
           <div style={infoCard}>
             <h3>Email</h3>
-            <p>support@deshvisa.com</p>
+            <p>Infonik3121@gmail.com</p>
           </div>
 
           <div style={infoCard}>
@@ -40,7 +40,7 @@ export default function Contact() {
             <h3>Address</h3>
             <p>
               Deshvisa Fashion Pvt. Ltd.<br />
-              New Delhi, India
+              Aurangabad (BIHAR) 824208
             </p>
           </div>
         </div>

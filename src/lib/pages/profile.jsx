@@ -1,25 +1,36 @@
 import { useGetProfileQuery } from "@/state/api";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 
 export default function Profile() {
   const navigate = useNavigate();
   const { data: user, isLoading, isError } = useGetProfileQuery();
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+    localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
     window.dispatchEvent(new Event("storage"));
     navigate("/login");
   };
 
+  /* ================= LOADING ================= */
   if (isLoading) {
-    return <div style={{ padding: "80px" }}>Loading profile...</div>;
+    return (
+      <div style={centerPage}>
+        <p>Loading your profile...</p>
+      </div>
+    );
   }
 
+  /* ================= ERROR ================= */
   if (isError || !user) {
     return (
-      <div style={{ padding: "80px" }}>
-        <h2>You must be logged in</h2>
+      <div style={centerPage}>
+        <h2 style={{ marginBottom: "16px" }}>
+          You must be logged in to view this page
+        </h2>
+        <button style={primaryBtn} onClick={() => navigate("/login")}>
+          Go to Login
+        </button>
       </div>
     );
   }
@@ -30,18 +41,20 @@ export default function Profile() {
       <section style={heroStyle}>
         <div>
           <h1 style={heroTitle}>Welcome, {user.name}</h1>
-          <p style={heroSubtitle}>Manage your account & activity</p>
+          <p style={heroSubtitle}>Manage your account & orders</p>
         </div>
       </section>
 
       {/* PROFILE CARD */}
       <section style={section}>
         <div style={profileCard}>
+          {/* Avatar */}
           <div style={avatar}>👤</div>
 
-          <h2 style={{ marginBottom: "5px" }}>{user.name}</h2>
-          <p style={{ color: "#777" }}>{user.email}</p>
+          <h2 style={{ marginBottom: "4px" }}>{user.name}</h2>
+          <p style={{ color: "#666", marginBottom: "20px" }}>{user.email}</p>
 
+          {/* Info */}
           <div style={infoGrid}>
             <Info label="Phone" value={user.phone || "N/A"} />
             <Info label="Role" value={user.role} />
@@ -51,12 +64,22 @@ export default function Profile() {
             />
           </div>
 
+          {/* Actions */}
           <div style={actionGrid}>
-            <button style={primaryBtn}>Edit Profile</button>
-            <button style={secondaryBtn}>Change Password</button>
+            <Link to="/orders" style={linkBtn}>
+              My Orders
+            </Link>
+
+            <Link to="/change-password" style={secondaryBtn}>
+              Change Password
+            </Link>
+
             <button style={logoutBtn} onClick={handleLogout}>
               Logout
             </button>
+            <Link to="/logout-all" style={secondaryBtn}>
+              Logout All Devices
+            </Link>
           </div>
         </div>
       </section>
@@ -64,11 +87,12 @@ export default function Profile() {
   );
 }
 
-/* ========== SMALL COMPONENT ========== */
+/* ================= SMALL COMPONENT ================= */
+
 function Info({ label, value }) {
   return (
     <div style={infoCard}>
-      <span style={{ fontSize: "13px", color: "#888" }}>{label}</span>
+      <span style={infoLabel}>{label}</span>
       <strong>{value}</strong>
     </div>
   );
@@ -76,17 +100,34 @@ function Info({ label, value }) {
 
 /* ================= STYLES ================= */
 
-const heroStyle = {
-  height: "50vh",
-  background: "linear-gradient(to right, #000, #222)",
-  color: "#fff",
+const centerPage = {
+  minHeight: "70vh",
   display: "flex",
+  flexDirection: "column",
   alignItems: "center",
   justifyContent: "center",
 };
 
-const heroTitle = { fontSize: "42px", marginBottom: "10px" };
-const heroSubtitle = { fontSize: "18px", color: "#ccc" };
+const heroStyle = {
+  height: "45vh",
+  background: "linear-gradient(135deg, #000, #222)",
+  color: "#fff",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  textAlign: "center",
+};
+
+const heroTitle = {
+  fontSize: "42px",
+  fontWeight: "700",
+  marginBottom: "8px",
+};
+
+const heroSubtitle = {
+  fontSize: "18px",
+  color: "#ccc",
+};
 
 const section = {
   padding: "80px 20px",
@@ -97,9 +138,9 @@ const section = {
 const profileCard = {
   background: "#fff",
   padding: "40px",
-  borderRadius: "16px",
+  borderRadius: "18px",
   width: "100%",
-  maxWidth: "500px",
+  maxWidth: "480px",
   textAlign: "center",
   boxShadow: "0 20px 40px rgba(0,0,0,0.1)",
 };
@@ -120,15 +161,22 @@ const avatar = {
 const infoGrid = {
   display: "grid",
   gridTemplateColumns: "repeat(3, 1fr)",
-  gap: "15px",
-  margin: "30px 0",
+  gap: "14px",
+  marginBottom: "30px",
 };
 
 const infoCard = {
-  background: "#f7f7f7",
+  background: "#f6f6f6",
   padding: "12px",
   borderRadius: "10px",
   fontSize: "14px",
+};
+
+const infoLabel = {
+  fontSize: "12px",
+  color: "#777",
+  display: "block",
+  marginBottom: "4px",
 };
 
 const actionGrid = {
@@ -150,9 +198,17 @@ const secondaryBtn = {
   padding: "12px",
   background: "#eee",
   color: "#000",
-  border: "none",
   borderRadius: "8px",
-  cursor: "pointer",
+  textDecoration: "none",
+  textAlign: "center",
+};
+
+const linkBtn = {
+  padding: "12px",
+  background: "#000",
+  color: "#fff",
+  borderRadius: "8px",
+  textDecoration: "none",
 };
 
 const logoutBtn = {
