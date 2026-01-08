@@ -29,7 +29,7 @@ import Wishlist from "./lib/pages/wishlist";
 import Cart from "./lib/pages/bag";
 
 /* ========== ORDERS ========== */
-import Checkout from "./lib/pages/checkout";
+import Checkout from "./lib/pages/Checkout";
 import OrderSuccess from "./lib/pages/OrderSuccess";
 import MyOrders from "./lib/pages/MyOrder";
 import OrderDetails from "./lib/pages/OrderDetails";
