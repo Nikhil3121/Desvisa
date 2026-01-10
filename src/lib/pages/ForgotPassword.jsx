@@ -1,33 +1,44 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { useForgotPasswordMutation } from "@/state/api";
+import { sendPasswordResetEmail } from "firebase/auth";
+import { auth } from "@/firebase/firebase";
 
 function ForgotPassword() {
-  const [forgotPassword, { isLoading }] = useForgotPasswordMutation();
   const [message, setMessage] = useState("");
   const [success, setSuccess] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage("");
     setSuccess(false);
 
+    const email = e.target.email.value;
+
     try {
-      await forgotPassword({
-        email: e.target.email.value,
-      }).unwrap();
+      setLoading(true);
+
+      // 🔐 Force correct reset redirect URL
+      await sendPasswordResetEmail(auth, email, {
+        url: `${window.location.origin}/reset-password`,
+        handleCodeInApp: true,
+      });
 
       setSuccess(true);
-      setMessage(
-        "✅ Password reset email sent. Please check your inbox."
-      );
+      setMessage("✅ Password reset email sent. Please check your inbox.");
 
       e.target.reset();
     } catch (err) {
       setSuccess(false);
       setMessage(
-        `❌ ${err?.data?.message || "Failed to send reset email"}`
+        err.code === "auth/user-not-found"
+          ? "❌ No account found with this email"
+          : err.code === "auth/too-many-requests"
+          ? "❌ Too many requests. Try again later."
+          : "❌ Failed to send reset email"
       );
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -56,10 +67,10 @@ function ForgotPassword() {
 
           <button
             type="submit"
-            disabled={isLoading}
+            disabled={loading}
             className="w-full py-3 bg-black text-white font-semibold rounded-lg hover:bg-gray-800 transition disabled:opacity-60"
           >
-            {isLoading ? "Sending..." : "Send Reset Link"}
+            {loading ? "Sending..." : "Send Reset Link"}
           </button>
         </form>
 

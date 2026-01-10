@@ -1,21 +1,29 @@
 import { useState } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
-import { useResetPasswordMutation } from "@/state/api";
+import { useNavigate, Link, useSearchParams } from "react-router-dom";
+import {
+  confirmPasswordReset,
+} from "firebase/auth";
+import { auth } from "@/firebase/firebase";
 
 function ResetPassword() {
-  const { token } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
-  const [resetPassword, { isLoading }] = useResetPasswordMutation();
+  const oobCode = searchParams.get("oobCode"); // 🔑 Firebase reset code
 
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [message, setMessage] = useState("");
   const [success, setSuccess] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage("");
+
+    if (!oobCode) {
+      return setMessage("❌ Invalid or expired reset link");
+    }
 
     if (password.length < 6) {
       return setMessage("❌ Password must be at least 6 characters");
@@ -26,7 +34,10 @@ function ResetPassword() {
     }
 
     try {
-      await resetPassword({ token, password }).unwrap();
+      setLoading(true);
+
+      // 🔐 Firebase confirms reset
+      await confirmPasswordReset(auth, oobCode, password);
 
       setSuccess(true);
       setMessage("✅ Password reset successful. Redirecting to login...");
@@ -37,8 +48,14 @@ function ResetPassword() {
     } catch (err) {
       setSuccess(false);
       setMessage(
-        `❌ ${err?.data?.message || "Reset link expired or invalid"}`
+        err.code === "auth/expired-action-code"
+          ? "❌ Reset link expired. Please request a new one."
+          : err.code === "auth/invalid-action-code"
+          ? "❌ Invalid reset link"
+          : "❌ Failed to reset password"
       );
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -77,10 +94,14 @@ function ResetPassword() {
 
           <button
             type="submit"
-            disabled={isLoading}
+            disabled={loading || success}
             className="w-full py-3 bg-black text-white font-semibold rounded-lg hover:bg-gray-800 transition disabled:opacity-60"
           >
-            {isLoading ? "Resetting..." : "Reset Password"}
+            {loading
+              ? "Resetting..."
+              : success
+              ? "Password Reset"
+              : "Reset Password"}
           </button>
         </form>
 

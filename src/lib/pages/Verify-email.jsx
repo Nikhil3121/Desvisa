@@ -1,45 +1,67 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import axios from "axios";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { applyActionCode } from "firebase/auth";
+import { auth } from "@/firebase/firebase";
+import { useFirebaseLoginMutation } from "@/state/api";
 
 function VerifyEmail() {
-  const { token } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const [firebaseLogin] = useFirebaseLoginMutation();
 
   const [status, setStatus] = useState("loading");
   const [message, setMessage] = useState("");
 
   useEffect(() => {
+    let isMounted = true;
+
     const verify = async () => {
       try {
-        const res = await axios.get(
-          `${import.meta.env.VITE_BASE_URL}/api/auth/verify-email/${token}`
-        );
+        const oobCode = searchParams.get("oobCode");
 
-        // 🔐 STORE TOKENS
-        localStorage.setItem("accessToken", res.data.accessToken);
-        localStorage.setItem("refreshToken", res.data.refreshToken);
+        if (!oobCode) {
+          throw new Error("missing-code");
+        }
+
+        // 🔐 Apply Firebase email verification
+        await applyActionCode(auth, oobCode);
+
+        // 🔄 If user is logged in, sync with backend
+        if (auth.currentUser) {
+          await auth.currentUser.reload();
+        }
+
+        if (!isMounted) return;
 
         setStatus("success");
-        setMessage(res.data.message);
+        setMessage("Email verified successfully");
 
-        // ⏳ Redirect after animation
         setTimeout(() => navigate("/profile"), 2500);
       } catch (err) {
+        if (!isMounted) return;
+
         setStatus("error");
-        setMessage(
-          err?.response?.data?.message || "Verification failed"
-        );
+
+        if (err.code === "auth/invalid-action-code") {
+          setMessage("Invalid or expired verification link");
+        } else if (err.message === "missing-code") {
+          setMessage("Invalid verification link");
+        } else {
+          setMessage("Email verification failed. Please login again.");
+        }
       }
     };
 
     verify();
-  }, [token, navigate]);
+
+    return () => {
+      isMounted = false;
+    };
+  }, [searchParams, firebaseLogin, navigate]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
       <div className="bg-white p-10 rounded-xl shadow-lg text-center w-full max-w-md">
-
         {status === "loading" && (
           <p className="text-lg font-medium">Verifying your email…</p>
         )}
@@ -47,12 +69,8 @@ function VerifyEmail() {
         {status === "success" && (
           <div className="animate-pop">
             <div className="text-green-600 text-6xl mb-4">✔</div>
-            <h2 className="text-2xl font-bold mb-2">
-              Email Verified!
-            </h2>
-            <p className="text-gray-600">
-              Redirecting to your account…
-            </p>
+            <h2 className="text-2xl font-bold mb-2">Email Verified!</h2>
+            <p className="text-gray-600">Redirecting to your account…</p>
           </div>
         )}
 
@@ -66,7 +84,6 @@ function VerifyEmail() {
         )}
       </div>
 
-      {/* ANIMATION */}
       <style>
         {`
           .animate-pop {

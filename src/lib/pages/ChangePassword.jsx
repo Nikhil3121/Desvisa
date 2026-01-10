@@ -1,16 +1,21 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { useChangePasswordMutation } from "@/state/api";
+import {
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+  updatePassword,
+} from "firebase/auth";
+import { auth } from "@/firebase/firebase";
 
 function ChangePassword() {
   const navigate = useNavigate();
-  const [changePassword, { isLoading }] = useChangePasswordMutation();
 
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [message, setMessage] = useState("");
   const [success, setSuccess] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -25,16 +30,40 @@ function ChangePassword() {
     }
 
     try {
-      await changePassword({
-        currentPassword,
-        newPassword,
-      }).unwrap();
+      setLoading(true);
+
+      const user = auth.currentUser;
+
+      if (!user || !user.email) {
+        throw new Error("User not authenticated");
+      }
+
+      // 🚫 Google-only users cannot change password
+      const hasPasswordProvider = user.providerData.some(
+        (p) => p.providerId === "password"
+      );
+
+      if (!hasPasswordProvider) {
+        throw new Error("This account uses Google sign-in");
+      }
+
+      // 🔐 Re-authenticate
+      const credential = EmailAuthProvider.credential(
+        user.email,
+        currentPassword
+      );
+
+      await reauthenticateWithCredential(user, credential);
+
+      // 🔑 Update password
+      await updatePassword(user, newPassword);
 
       setSuccess(true);
       setMessage("✅ Password changed successfully. Please login again.");
 
-      // 🔒 logout user after password change
-      setTimeout(() => {
+      // 🔒 Logout
+      setTimeout(async () => {
+        await auth.signOut();
         localStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
         navigate("/login");
@@ -42,8 +71,16 @@ function ChangePassword() {
     } catch (err) {
       setSuccess(false);
       setMessage(
-        `❌ ${err?.data?.message || "Failed to change password"}`
+        err.message === "This account uses Google sign-in"
+          ? "❌ Password change not available for Google accounts"
+          : err.code === "auth/wrong-password"
+          ? "❌ Current password is incorrect"
+          : err.code === "auth/requires-recent-login"
+          ? "❌ Please login again to change password"
+          : "❌ Failed to change password"
       );
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -91,10 +128,10 @@ function ChangePassword() {
 
           <button
             type="submit"
-            disabled={isLoading || success}
+            disabled={loading || success}
             className="w-full py-3 bg-black text-white font-semibold rounded-lg hover:bg-gray-800 transition disabled:opacity-60"
           >
-            {isLoading
+            {loading
               ? "Updating..."
               : success
               ? "Password Updated"

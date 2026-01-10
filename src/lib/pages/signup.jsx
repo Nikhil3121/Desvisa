@@ -6,6 +6,7 @@ import {
 } from "firebase/auth";
 import { auth } from "@/firebase/firebase";
 import { googleLogin } from "@/lib/utils";
+import { useFirebaseLoginMutation } from "@/state/api";
 
 /* ================= PASSWORD STRENGTH ================= */
 const getPasswordStrength = (password) => {
@@ -20,6 +21,7 @@ const getPasswordStrength = (password) => {
 
 export default function Signup() {
   const navigate = useNavigate();
+  const [firebaseLogin] = useFirebaseLoginMutation();
 
   const [form, setForm] = useState({
     name: "",
@@ -57,48 +59,51 @@ export default function Signup() {
   const handleChange = (e) =>
     setForm({ ...form, [e.target.name]: e.target.value });
 
+  /* ================= EMAIL SIGNUP ================= */
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage("");
 
-    if (strength < 3) {
-      return setMessage(
-        "Password is too weak. Use uppercase letters, numbers, and symbols."
-      );
-    }
-
-    if (form.password !== form.confirmPassword) {
-      return setMessage("Passwords do not match.");
-    }
-
-    if (!acceptTerms) {
-      return setMessage("Please accept the Terms & Conditions.");
-    }
-
     try {
       setLoading(true);
 
-      await createUserWithEmailAndPassword(
+      const userCredential = await createUserWithEmailAndPassword(
         auth,
         form.email,
         form.password
       );
 
-      await sendEmailVerification(auth.currentUser);
+      const user = userCredential.user;
+
+      await sendEmailVerification(user, {
+        url: "https://desvisa.com/emailverify",
+      });
 
       setSuccess(true);
-      setMessage(
-        "Account created successfully. Please verify your email before logging in."
-      );
+      setMessage("Check your email to verify your account.");
     } catch (err) {
       setSuccess(false);
       setMessage(
         err.code === "auth/email-already-in-use"
           ? "Email already registered"
-          : "Signup failed. Please try again."
+          : "Signup failed"
       );
     } finally {
       setLoading(false);
+    }
+  };
+
+  /* ================= GOOGLE SIGNUP ================= */
+  const handleGoogleSignup = async () => {
+    try {
+      await googleLogin();
+
+      const idToken = await auth.currentUser.getIdToken();
+      await firebaseLogin(idToken).unwrap();
+
+      navigate("/profile");
+    } catch {
+      alert("Google signup failed");
     }
   };
 
@@ -177,14 +182,7 @@ export default function Signup() {
           {/* GOOGLE */}
           <button
             type="button"
-            onClick={async () => {
-              try {
-                await googleLogin();
-                navigate("/profile");
-              } catch {
-                alert("Google login failed");
-              }
-            }}
+            onClick={handleGoogleSignup}
             className="w-full py-3 border border-gray-300 rounded-xl font-medium hover:bg-gray-50"
           >
             Continue with Google

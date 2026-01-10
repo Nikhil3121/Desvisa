@@ -1,72 +1,86 @@
-import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
-import { auth } from "@/firebase/firebase";
+import {
+  createApi,
+  fetchBaseQuery,
+} from "@reduxjs/toolkit/query/react";
 
-/* ================= BASE QUERY (FIREBASE) ================= */
-const baseQuery = fetchBaseQuery({
+/* ================= RAW BASE QUERY ================= */
+const rawBaseQuery = fetchBaseQuery({
   baseUrl: import.meta.env.VITE_BASE_URL,
-  prepareHeaders: async (headers) => {
-    const user = auth.currentUser;
+  prepareHeaders: (headers, { getState }) => {
+    const accessToken = getState()?.auth?.accessToken;
 
-    if (user) {
-      // 🔥 Firebase auto-refreshes token internally
-      const token = await user.getIdToken();
-      headers.set("authorization", `Bearer ${token}`);
+    if (accessToken) {
+      headers.set("authorization", `Bearer ${accessToken}`);
     }
 
     return headers;
   },
 });
+
+/* ================= BASE QUERY WITH REAUTH ================= */
+const baseQueryWithReauth = async (args, api, extraOptions) => {
+  let result = await rawBaseQuery(args, api, extraOptions);
+
+  if (result?.error?.status === 401) {
+    const refreshToken = api.getState()?.auth?.refreshToken;
+
+    if (!refreshToken) {
+      api.dispatch({ type: "auth/logout" });
+      return result;
+    }
+
+    // 🔁 Refresh JWT
+    const refreshResult = await rawBaseQuery(
+      {
+        url: "/api/auth/refresh-token",
+        method: "POST",
+        body: { refreshToken },
+      },
+      api,
+      extraOptions
+    );
+
+    if (refreshResult?.data?.accessToken) {
+      api.dispatch({
+        type: "auth/setCredentials",
+        payload: refreshResult.data,
+      });
+
+      // 🔁 Retry original request
+      result = await rawBaseQuery(args, api, extraOptions);
+    } else {
+      api.dispatch({ type: "auth/logout" });
+    }
+  }
+
+  return result;
+};
+
 /* ================= API ================= */
 export const api = createApi({
   reducerPath: "api",
-
-  // ✅ Use Firebase baseQuery (NOT baseQueryWithReauth)
-  baseQuery,
+  baseQuery: baseQueryWithReauth,
 
   tagTypes: [
     "Products",
     "Product",
-    "Customers",
     "User",
     "Wishlist",
     "Orders",
     "Order",
     "Cart",
+    "Customers",
   ],
 
   endpoints: (builder) => ({
     /* ================= AUTH ================= */
-    
 
-    loginUser: builder.mutation({
-      query: (body) => ({
-        url: "/api/auth/login",
+    // 🔥 Firebase → Backend bridge (ONLY AUTH API)
+    firebaseLogin: builder.mutation({
+      query: (idToken) => ({
+        url: "/api/auth/firebase",
         method: "POST",
-        body,
-      }),
-    }),
-
-    forgotPassword: builder.mutation({
-      query: (body) => ({
-        url: "/api/auth/forgot-password",
-        method: "POST",
-        body,
-      }),
-    }),
-
-    resetPassword: builder.mutation({
-      query: ({ token, password }) => ({
-        url: `/api/auth/reset-password/${token}`,
-        method: "POST",
-        body: { password },
-      }),
-    }),
-
-    changePassword: builder.mutation({
-      query: (body) => ({
-        url: "/api/auth/change-password",
-        method: "POST",
-        body,
+        body: { idToken },
       }),
     }),
 
@@ -81,13 +95,9 @@ export const api = createApi({
     getProducts: builder.query({
       query: ({ category, search } = {}) => {
         const params = new URLSearchParams();
-
         if (category) params.append("category", category);
         if (search) params.append("search", search);
-
-        const queryString = params.toString();
-
-        return `/api/products/${queryString ? `?${queryString}` : ""}`;
+        return `/api/products${params.toString() ? `?${params}` : ""}`;
       },
       providesTags: ["Products"],
     }),
@@ -218,25 +228,26 @@ export const api = createApi({
 
 /* ================= EXPORT HOOKS ================= */
 export const {
-  
-  useLoginUserMutation,
-  useForgotPasswordMutation,
-  useResetPasswordMutation,
-  useChangePasswordMutation,
+  // AUTH
+  useFirebaseLoginMutation,
   useLogoutAllDevicesMutation,
 
+  // PRODUCTS
   useGetProductsQuery,
   useGetProductByIdQuery,
 
+  // USER
   useGetProfileQuery,
   useToggleWishlistMutation,
   useGetWishlistQuery,
 
+  // CART
   useGetCartQuery,
   useAddToCartMutation,
   useUpdateCartQtyMutation,
   useRemoveFromCartMutation,
 
+  // ORDERS
   useCreateOrderMutation,
   useCreateRazorpayOrderMutation,
   useVerifyPaymentMutation,
@@ -246,5 +257,6 @@ export const {
   useCancelOrderMutation,
   useLazyDownloadInvoiceQuery,
 
+  // ADMIN
   useGetCustomersQuery,
 } = api;
