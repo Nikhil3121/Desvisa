@@ -1,35 +1,40 @@
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { useLogoutAllDevicesMutation } from "@/state/api";
+import { signOut } from "firebase/auth";
+import { auth } from "@/firebase/firebase";
 
 function LogoutAllDevices() {
   const navigate = useNavigate();
-  const [logoutAllDevices, { isLoading }] = useLogoutAllDevicesMutation();
 
   const [message, setMessage] = useState("");
   const [success, setSuccess] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const handleLogoutAll = async () => {
     setMessage("");
+    setLoading(true);
 
     try {
-      await logoutAllDevices().unwrap();
+      // 🔐 Firebase sign out (current device)
+      await signOut(auth);
 
-      // 🔒 Clear tokens locally
+      // 🔒 Clear local storage
       localStorage.removeItem("accessToken");
       localStorage.removeItem("refreshToken");
 
       setSuccess(true);
-      setMessage("✅ You have been logged out from all devices.");
+      setMessage(
+        "✅ You have been logged out from this device. Please login again on other devices if needed."
+      );
 
       setTimeout(() => {
         navigate("/login");
       }, 2000);
     } catch (err) {
       setSuccess(false);
-      setMessage(
-        `❌ ${err?.data?.message || "Failed to logout from all devices"}`
-      );
+      setMessage("❌ Failed to logout. Please try again.");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -41,20 +46,20 @@ function LogoutAllDevices() {
           Logout From All Devices
         </h1>
         <p className="text-gray-500 mb-6">
-          This will sign you out from all browsers and devices.
+          This will sign you out from this device.
         </p>
 
         {/* Action */}
         <button
           onClick={handleLogoutAll}
-          disabled={isLoading || success}
+          disabled={loading || success}
           className="w-full py-3 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition disabled:opacity-60"
         >
-          {isLoading
+          {loading
             ? "Logging out..."
             : success
             ? "Logged Out"
-            : "Logout All Devices"}
+            : "Logout"}
         </button>
 
         {/* Message */}

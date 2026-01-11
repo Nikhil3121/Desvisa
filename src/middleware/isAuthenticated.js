@@ -1,9 +1,9 @@
-import jwt from "jsonwebtoken";
+import admin from "../firebase/firebase";
 
 /* =====================================================
-   JWT PROTECT MIDDLEWARE
+   FIREBASE AUTH PROTECT MIDDLEWARE
 ===================================================== */
-const protect = (req, res, next) => {
+const protect = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
 
@@ -17,7 +17,6 @@ const protect = (req, res, next) => {
 
     const token = authHeader.split(" ")[1];
 
-    // ❌ Token missing after Bearer
     if (!token) {
       return res.status(401).json({
         success: false,
@@ -25,29 +24,32 @@ const protect = (req, res, next) => {
       });
     }
 
-    // 🔐 Verify JWT
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    // 🔐 Verify Firebase ID token
+    const decoded = await admin.auth().verifyIdToken(token);
 
-    // ✅ Attach user info to request
+    // ❌ Block unverified email/password users
+    if (!decoded.email_verified) {
+      return res.status(403).json({
+        success: false,
+        message: "Email not verified",
+      });
+    }
+
+    // ✅ Attach user info
     req.user = {
-      id: decoded.id,
+      uid: decoded.uid,
+      email: decoded.email,
+      name: decoded.name || "",
       role: decoded.role || "user",
     };
 
     next();
   } catch (error) {
-    // 🔁 Token expired
-    if (error.name === "TokenExpiredError") {
-      return res.status(401).json({
-        success: false,
-        message: "Access token expired",
-      });
-    }
+    console.error("Auth error:", error.message);
 
-    // ❌ Invalid token
     return res.status(401).json({
       success: false,
-      message: "Invalid access token",
+      message: "Invalid or expired token",
     });
   }
 };

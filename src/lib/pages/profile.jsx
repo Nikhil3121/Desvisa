@@ -1,16 +1,56 @@
 import { useGetProfileQuery } from "@/state/api";
 import { useNavigate, Link } from "react-router-dom";
+import { auth } from "@/firebase/firebase";
+import { useEffect, useState } from "react";
 
 export default function Profile() {
   const navigate = useNavigate();
-  const { data: user, isLoading, isError } = useGetProfileQuery();
+  const [isReady, setIsReady] = useState(false);
 
-  const handleLogout = () => {
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("refreshToken");
-    window.dispatchEvent(new Event("storage"));
+  // 🔐 Wait for Firebase auth to initialize
+  useEffect(() => {
+    const unsub = auth.onAuthStateChanged(() => {
+      setIsReady(true);
+    });
+    return () => unsub();
+  }, []);
+
+  // 🚫 Do NOT call API until Firebase is ready & user exists
+  const {
+    data: user,
+    isLoading,
+    isError,
+  } = useGetProfileQuery(undefined, {
+    skip: !isReady || !auth.currentUser,
+  });
+
+  const handleLogout = async () => {
+    await auth.signOut();
     navigate("/login");
   };
+
+  /* ================= AUTH NOT READY ================= */
+  if (!isReady) {
+    return (
+      <div style={centerPage}>
+        <p>Checking session...</p>
+      </div>
+    );
+  }
+
+  /* ================= NOT AUTHENTICATED ================= */
+  if (!auth.currentUser) {
+    return (
+      <div style={centerPage}>
+        <h2 style={{ marginBottom: "16px" }}>
+          You must be logged in to view this page
+        </h2>
+        <button style={primaryBtn} onClick={() => navigate("/login")}>
+          Go to Login
+        </button>
+      </div>
+    );
+  }
 
   /* ================= LOADING ================= */
   if (isLoading) {
@@ -26,9 +66,9 @@ export default function Profile() {
     return (
       <div style={centerPage}>
         <h2 style={{ marginBottom: "16px" }}>
-          You must be logged in to view this page
+          Session expired. Please login again.
         </h2>
-        <button style={primaryBtn} onClick={() => navigate("/login")}>
+        <button style={primaryBtn} onClick={handleLogout}>
           Go to Login
         </button>
       </div>
@@ -48,13 +88,13 @@ export default function Profile() {
       {/* PROFILE CARD */}
       <section style={section}>
         <div style={profileCard}>
-          {/* Avatar */}
           <div style={avatar}>👤</div>
 
           <h2 style={{ marginBottom: "4px" }}>{user.name}</h2>
-          <p style={{ color: "#666", marginBottom: "20px" }}>{user.email}</p>
+          <p style={{ color: "#666", marginBottom: "20px" }}>
+            {user.email}
+          </p>
 
-          {/* Info */}
           <div style={infoGrid}>
             <Info label="Phone" value={user.phone || "N/A"} />
             <Info label="Role" value={user.role} />
@@ -64,7 +104,6 @@ export default function Profile() {
             />
           </div>
 
-          {/* Actions */}
           <div style={actionGrid}>
             <Link to="/orders" style={linkBtn}>
               My Orders
@@ -77,6 +116,7 @@ export default function Profile() {
             <button style={logoutBtn} onClick={handleLogout}>
               Logout
             </button>
+
             <Link to="/logout-all" style={secondaryBtn}>
               Logout All Devices
             </Link>
@@ -88,7 +128,6 @@ export default function Profile() {
 }
 
 /* ================= SMALL COMPONENT ================= */
-
 function Info({ label, value }) {
   return (
     <div style={infoCard}>

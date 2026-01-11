@@ -61,37 +61,64 @@ export default function Signup() {
 
   /* ================= EMAIL SIGNUP ================= */
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setMessage("");
+  e.preventDefault();
+  setMessage("");
 
-    try {
-      setLoading(true);
+  // ✅ Password validation
+  if (strength < 3) {
+    return setMessage(
+      "Password is too weak. Use uppercase letters, numbers, and symbols."
+    );
+  }
 
-      const userCredential = await createUserWithEmailAndPassword(
-        auth,
-        form.email,
-        form.password
-      );
+  if (form.password !== form.confirmPassword) {
+    return setMessage("Passwords do not match.");
+  }
 
-      const user = userCredential.user;
+  // ✅ Terms check
+  if (!acceptTerms) {
+    return setMessage("Please accept the Terms & Conditions.");
+  }
 
-      await sendEmailVerification(user, {
-        url: "https://desvisa.com/emailverify",
-      });
+  try {
+    setLoading(true);
 
-      setSuccess(true);
-      setMessage("Check your email to verify your account.");
-    } catch (err) {
-      setSuccess(false);
-      setMessage(
-        err.code === "auth/email-already-in-use"
-          ? "Email already registered"
-          : "Signup failed"
-      );
-    } finally {
-      setLoading(false);
+    // 1️⃣ Firebase signup
+    const userCredential = await createUserWithEmailAndPassword(
+      auth,
+      form.email,
+      form.password
+    );
+
+    const user = userCredential.user;
+
+    // 2️⃣ Send verification email (FIXED)
+    await sendEmailVerification(user, {
+      url: "https://desvisa.com/emailverify",
+      handleCodeInApp: true,
+    });
+
+    setSuccess(true);
+    setMessage(
+      "Account created successfully. Please check your email to verify your account."
+    );
+  } catch (err) {
+    setSuccess(false);
+
+    if (err.code === "auth/email-already-in-use") {
+      setMessage("Email already registered");
+    } else if (err.code === "auth/invalid-email") {
+      setMessage("Invalid email address");
+    } else if (err.code === "auth/weak-password") {
+      setMessage("Password is too weak");
+    } else {
+      setMessage("Signup failed. Please try again.");
     }
-  };
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   /* ================= GOOGLE SIGNUP ================= */
   const handleGoogleSignup = async () => {

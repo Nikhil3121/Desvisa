@@ -76,7 +76,7 @@ export default function App() {
 
         {/* ===== SECURITY ===== */}
         <Route path="/logout-all" element={<LogoutAllDevices />} />
-        <Route path="/verify-email/:token" element={<VerifyEmail />} />
+        <Route path="/verifyemail/:token" element={<VerifyEmail />} />
         {/* ===== FALLBACK ===== */}
         <Route path="*" element={<NotFound />} />
       </Routes>

@@ -3,9 +3,12 @@ import { Link, useNavigate } from "react-router-dom";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "@/firebase/firebase";
 import { useFirebaseLoginMutation } from "@/state/api";
+import { useDispatch } from "react-redux";
+import { setCredentials } from "@/state/authSlice";
 
 export default function Login() {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const [firebaseLogin] = useFirebaseLoginMutation();
 
   const [email, setEmail] = useState("");
@@ -22,7 +25,7 @@ export default function Login() {
     setLoading(true);
 
     try {
-      // 1️⃣ Firebase login
+      /* ================= FIREBASE LOGIN ================= */
       const userCredential = await signInWithEmailAndPassword(
         auth,
         email,
@@ -31,46 +34,48 @@ export default function Login() {
 
       const user = userCredential.user;
 
-      // 2️⃣ Block unverified email/password users
-      if (
-        user.providerData.some((p) => p.providerId === "password") &&
-        !user.emailVerified
-      ) {
-        throw { code: "auth/email-not-verified" };
+      // 🔄 Ensure latest verification state
+      await user.reload();
+
+      /* ================= EMAIL VERIFIED CHECK ================= */
+      const isPasswordUser = user.providerData.some(
+        (p) => p.providerId === "password"
+      );
+
+      if (isPasswordUser && !user.emailVerified) {
+        throw new Error("EMAIL_NOT_VERIFIED");
       }
 
-      // 3️⃣ Get Firebase ID token (safe)
-      const idToken = await user.getIdToken();
+      /* ================= GET FIREBASE TOKEN ================= */
+      const idToken = await user.getIdToken(true);
 
-      // 4️⃣ Sync with backend
-      try {
-        await firebaseLogin(idToken).unwrap();
-      } catch {
-        throw { code: "backend-sync-failed" };
+      /* ================= BACKEND SYNC ================= */
+      const result = await firebaseLogin(idToken).unwrap();
+
+      if (!result?.accessToken || !result?.refreshToken) {
+        throw new Error("BACKEND_AUTH_FAILED");
       }
 
-      // 5️⃣ Redirect
+      /* ================= SAVE SESSION ================= */
+      dispatch(
+        setCredentials({
+          accessToken: result.accessToken,
+          refreshToken: result.refreshToken,
+          user: result.user,
+        })
+      );
+
+      /* ================= REDIRECT ================= */
       navigate("/profile", { replace: true });
     } catch (err) {
-      switch (err.code) {
-        case "auth/invalid-credential":
-          setError("Invalid email or password");
-          break;
-
-        case "auth/user-disabled":
-          setError("This account has been disabled");
-          break;
-
-        case "auth/email-not-verified":
-          setError("Please verify your email before logging in");
-          break;
-
-        case "backend-sync-failed":
-          setError("Login failed. Please try again");
-          break;
-
-        default:
-          setError("Something went wrong. Please try again.");
+      if (err.message === "EMAIL_NOT_VERIFIED") {
+        setError("Please verify your email before logging in");
+      } else if (err.code === "auth/invalid-credential") {
+        setError("Invalid email or password");
+      } else if (err.code === "auth/user-disabled") {
+        setError("This account has been disabled");
+      } else {
+        setError("Something went wrong. Please try again.");
       }
     } finally {
       setLoading(false);

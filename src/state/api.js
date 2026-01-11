@@ -1,65 +1,25 @@
-import {
-  createApi,
-  fetchBaseQuery,
-} from "@reduxjs/toolkit/query/react";
+import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
+import { auth } from "@/firebase/firebase";
 
-/* ================= RAW BASE QUERY ================= */
-const rawBaseQuery = fetchBaseQuery({
+/* ================= BASE QUERY (FIREBASE TOKEN) ================= */
+const baseQuery = fetchBaseQuery({
   baseUrl: import.meta.env.VITE_BASE_URL,
-  prepareHeaders: (headers, { getState }) => {
-    const accessToken = getState()?.auth?.accessToken;
+  prepareHeaders: async (headers) => {
+    const user = auth.currentUser;
 
-    if (accessToken) {
-      headers.set("authorization", `Bearer ${accessToken}`);
+    if (user) {
+      const token = await user.getIdToken(); // auto-refresh
+      headers.set("authorization", `Bearer ${token}`);
     }
 
     return headers;
   },
 });
 
-/* ================= BASE QUERY WITH REAUTH ================= */
-const baseQueryWithReauth = async (args, api, extraOptions) => {
-  let result = await rawBaseQuery(args, api, extraOptions);
-
-  if (result?.error?.status === 401) {
-    const refreshToken = api.getState()?.auth?.refreshToken;
-
-    if (!refreshToken) {
-      api.dispatch({ type: "auth/logout" });
-      return result;
-    }
-
-    // 🔁 Refresh JWT
-    const refreshResult = await rawBaseQuery(
-      {
-        url: "/api/auth/refresh-token",
-        method: "POST",
-        body: { refreshToken },
-      },
-      api,
-      extraOptions
-    );
-
-    if (refreshResult?.data?.accessToken) {
-      api.dispatch({
-        type: "auth/setCredentials",
-        payload: refreshResult.data,
-      });
-
-      // 🔁 Retry original request
-      result = await rawBaseQuery(args, api, extraOptions);
-    } else {
-      api.dispatch({ type: "auth/logout" });
-    }
-  }
-
-  return result;
-};
-
 /* ================= API ================= */
 export const api = createApi({
   reducerPath: "api",
-  baseQuery: baseQueryWithReauth,
+  baseQuery,
 
   tagTypes: [
     "Products",
@@ -75,19 +35,12 @@ export const api = createApi({
   endpoints: (builder) => ({
     /* ================= AUTH ================= */
 
-    // 🔥 Firebase → Backend bridge (ONLY AUTH API)
+    // 🔥 Firebase → Backend sync (creates user in DB)
     firebaseLogin: builder.mutation({
       query: (idToken) => ({
         url: "/api/auth/firebase",
         method: "POST",
         body: { idToken },
-      }),
-    }),
-
-    logoutAllDevices: builder.mutation({
-      query: () => ({
-        url: "/api/auth/logout-all",
-        method: "POST",
       }),
     }),
 
@@ -97,6 +50,7 @@ export const api = createApi({
         const params = new URLSearchParams();
         if (category) params.append("category", category);
         if (search) params.append("search", search);
+
         return `/api/products${params.toString() ? `?${params}` : ""}`;
       },
       providesTags: ["Products"],
@@ -185,14 +139,6 @@ export const api = createApi({
       invalidatesTags: ["Orders"],
     }),
 
-    createShipment: builder.mutation({
-      query: (body) => ({
-        url: "/api/orders/shiprocket",
-        method: "POST",
-        body,
-      }),
-    }),
-
     getMyOrders: builder.query({
       query: () => "/api/orders/myorders",
       providesTags: ["Orders"],
@@ -217,6 +163,13 @@ export const api = createApi({
         responseHandler: (res) => res.blob(),
       }),
     }),
+    createShipment: builder.mutation({
+      query: (body) => ({
+        url: "/api/orders/shiprocket",
+        method: "POST",
+        body,
+      }),
+    }),
 
     /* ================= ADMIN ================= */
     getCustomers: builder.query({
@@ -230,7 +183,6 @@ export const api = createApi({
 export const {
   // AUTH
   useFirebaseLoginMutation,
-  useLogoutAllDevicesMutation,
 
   // PRODUCTS
   useGetProductsQuery,
