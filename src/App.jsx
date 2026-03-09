@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import "./index.css";
+import { GitHubCalendar } from "react-github-calendar";
 
 /* ========== LAYOUT ========== */
 import Navbar from "./lib/components/Navbar";
@@ -12,6 +13,11 @@ import ProductDetails from "./lib/pages/Productdetail";
 import About from "./lib/pages/About";
 import Contact from "./lib/pages/contact";
 import NotFound from "./lib/pages/notfound";
+import Portfolio from "./lib/pages/Portfolio";
+import AIChatbot from "./lib/components/AIChatbot";
+import DevAvatar3D from "./lib/components/DevAvatar3D";
+import AI3DCharacter from "./lib/components/AI3DCharacter";
+import GalaxyBackground from "./lib/components/GalaxyBackground";
 
 /* ========== AUTH ========== */
 import Signup from "./lib/pages/signup";
@@ -48,10 +54,11 @@ export default function App() {
         <Route path="/" element={<Home />} />
         <Route path="/products" element={<Products />} />
         <Route path="/products/:id" element={<ProductDetails />} />
+        <Route path="/category/:category" element={<Products />} />
         <Route path="/about" element={<About />} />
         <Route path="/contact" element={<Contact />} />
-        <Route path="/category/:category" element={<Products />} />
-
+        <Route path="/portfolio" element={<Portfolio />} />
+        
 
         {/* ===== AUTH ===== */}
         <Route path="/signup" element={<Signup />} />
@@ -59,6 +66,7 @@ export default function App() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password/:token" element={<ResetPassword />} />
         <Route path="/change-password" element={<ChangePassword />} />
+        <Route path="/verifyemail" element={<VerifyEmail />} />
         <Route path="/terms" element={<Terms />} />
         <Route path="/privacy" element={<Privacy />} />
 
@@ -76,7 +84,7 @@ export default function App() {
 
         {/* ===== SECURITY ===== */}
         <Route path="/logout-all" element={<LogoutAllDevices />} />
-        <Route path="/verifyemail/:token" element={<VerifyEmail />} />
+
         {/* ===== FALLBACK ===== */}
         <Route path="*" element={<NotFound />} />
       </Routes>

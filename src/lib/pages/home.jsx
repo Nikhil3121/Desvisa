@@ -7,7 +7,7 @@ export default function Home() {
 
   return (
     <div style={{ background: "#0e0e0e", color: "#fff" }}>
-      {/* ================= PREMIUM FASHION BANNER ================= */}
+      {/* ================FASHION BANNER ================= */}
       <section style={fashionBanner}>
         <div style={fashionBannerOverlay}>
           <div style={fashionBannerContent}>
@@ -17,9 +17,7 @@ export default function Home() {
               Modern fashion built on confidence, detail, and attitude.
             </p>
 
-            <p style={fashionHighlight}>
-              Wear the difference. Own the moment.
-            </p>
+            <p style={fashionHighlight}>Wear the difference. Own the moment.</p>
 
             <div style={fashionDivider} />
 
@@ -62,14 +60,15 @@ export default function Home() {
       </section>
 
       {/* ================= EDITORIAL ================= */}
-      <section style={editorialSection}>
+      <section style={editorialSection}>    
         <div style={editorialImage} />
 
         <div style={editorialContent}>
           <h3 style={editorialTitle}>Designed for the Bold</h3>
           <p style={editorialText}>
             Our collections are crafted for individuals who express confidence
-            through style — modern silhouettes, premium fabrics, timeless appeal.
+            through style — modern silhouettes, premium fabrics, timeless
+            appeal.
           </p>
           <button style={editorialBtn}>Explore Collection</button>
         </div>

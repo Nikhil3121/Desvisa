@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+
 import { useEffect, useState } from "react";
 
 export default function Footer() {
@@ -15,23 +17,32 @@ export default function Footer() {
       }`}
     >
       <div className="max-w-7xl mx-auto px-6 py-16 grid grid-cols-1 md:grid-cols-4 gap-10">
-
         {/* BRAND */}
         <div>
-          <h3 className="text-xl font-semibold text-white mb-3">
-            Deshvisa 
-          </h3>
-          <h3>
-            Designed & Developed by Nikhil Kumar
-          </h3>
+          <h3 className="text-xl font-semibold text-white mb-3">Deshvisa</h3>
+          <h3>Designed & Developed by Nikhil Kumar</h3>
+
+          <Link
+            to="/portfolio"
+            className="inline-block mt-4 px-6 py-2 rounded-full 
+  bg-gradient-to-r from-indigo-500 to-purple-600 
+  text-white text-sm font-semibold tracking-wide
+  shadow-lg shadow-indigo-500/30
+  transition-all duration-300
+  hover:scale-105 hover:shadow-purple-500/40
+  active:scale-95"
+          >
+            🚀 View Portfolio
+          </Link>
+
           <p className="text-sm leading-relaxed text-neutral-400">
-            Modern fashion crafted with intention. Premium fabrics,
-            refined silhouettes, and everyday luxury.
+            Modern fashion crafted with intention. Premium fabrics, refined
+            silhouettes, and everyday luxury.
           </p>
 
           {/* WHATSAPP CTA */}
           <a
-            href="https://wa.me/919999999999"
+            href="https://wa.me/9142735101"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-block mt-4 px-5 py-2 rounded-full bg-green-600 text-white text-sm font-medium hover:bg-green-700 transition"
@@ -46,9 +57,15 @@ export default function Footer() {
             Information
           </h4>
           <ul className="space-y-2 text-sm">
-            <li><FooterLink label="Privacy Policy" /></li>
-            <li><FooterLink label="Terms & Conditions" /></li>
-            <li><FooterLink label="Return & Refund Policy" /></li>
+            <li>
+              <FooterLink label="Privacy Policy" />
+            </li>
+            <li>
+              <FooterLink label="Terms & Conditions" />
+            </li>
+            <li>
+              <FooterLink label="Return & Refund Policy" />
+            </li>
           </ul>
         </div>
 
@@ -58,9 +75,15 @@ export default function Footer() {
             Support
           </h4>
           <ul className="space-y-2 text-sm">
-            <li><FooterLink label="Contact Us" /></li>
-            <li><FooterLink label="Shipping Information" /></li>
-            <li><FooterLink label="FAQs" /></li>
+            <li>
+              <FooterLink label="Contact Us" />
+            </li>
+            <li>
+              <FooterLink label="Shipping Information" />
+            </li>
+            <li>
+              <FooterLink label="FAQs" />
+            </li>
           </ul>
         </div>
 
@@ -97,10 +120,26 @@ export default function Footer() {
 
           {/* PAYMENT ICONS */}
           <div className="flex gap-3 mt-6 opacity-80">
-            <img src="https://img.icons8.com/color/48/visa.png" alt="Visa" className="h-7" />
-            <img src="https://img.icons8.com/color/48/mastercard.png" alt="Mastercard" className="h-7" />
-            <img src="https://img.icons8.com/color/48/paytm.png" alt="Paytm" className="h-7" />
-            <img src="https://img.icons8.com/color/48/google-pay.png" alt="GPay" className="h-7" />
+            <img
+              src="https://img.icons8.com/color/48/visa.png"
+              alt="Visa"
+              className="h-7"
+            />
+            <img
+              src="https://img.icons8.com/color/48/mastercard.png"
+              alt="Mastercard"
+              className="h-7"
+            />
+            <img
+              src="https://img.icons8.com/color/48/paytm.png"
+              alt="Paytm"
+              className="h-7"
+            />
+            <img
+              src="https://img.icons8.com/color/48/google-pay.png"
+              alt="GPay"
+              className="h-7"
+            />
           </div>
         </div>
       </div>
@@ -111,9 +150,15 @@ export default function Footer() {
           <p>© {new Date().getFullYear()} Deshvisa. All rights reserved.</p>
 
           <div className="flex gap-4 mt-3 md:mt-0">
-            <a href="#" className="hover:text-white transition">Instagram</a>
-            <a href="#" className="hover:text-white transition">Twitter</a>
-            <a href="#" className="hover:text-white transition">Facebook</a>
+            <a href="#" className="hover:text-white transition">
+              Instagram
+            </a>
+            <a href="#" className="hover:text-white transition">
+              Twitter
+            </a>
+            <a href="#" className="hover:text-white transition">
+              Facebook
+            </a>
           </div>
         </div>
       </div>
@@ -124,10 +169,7 @@ export default function Footer() {
 /* ================= FOOTER LINK COMPONENT ================= */
 function FooterLink({ label }) {
   return (
-    <a
-      href="#"
-      className="hover:text-white transition"
-    >
+    <a href="#" className="hover:text-white transition">
       {label}
     </a>
   );
