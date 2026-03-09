@@ -444,7 +444,7 @@ export default function Portfolio() {
 
                       {/* Profile Image */}
                       <img
-                        src="./public/1image.jpeg"  
+                        src="/1image.jpeg"  
                         alt="Profile"
                         className="absolute inset-0 w-full h-full rounded-full object-cover transition-opacity duration-700 opacity-100"
                       />
